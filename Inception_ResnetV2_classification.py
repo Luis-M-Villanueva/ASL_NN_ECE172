@@ -11,7 +11,7 @@ from tensorflow.keras.utils import load_img,img_to_array
 from tensorflow.keras.optimizers import Adam, SGD
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.applications import ResNet50 
+from tensorflow.keras.applications import InceptionResNetV2
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
 
 print("Libraries Loaded")
@@ -51,43 +51,39 @@ print('Size of labels array:', labels.shape)
 n_classes = len(np.unique(labels))		# labels contains each label for each category too
 print("Number of classes: ", n_classes)
 
-
 #%%
-#ResNet50
+#Inception-ResnetV2
 
-rnn = Sequential()
+irn = Sequential()
 
-model = ResNet50(
+model = InceptionResNetV2(
         include_top = False,
         weights= None,
-		input_tensor = None,
+		input_tensor= None,
         input_shape = (200,200,1),
-		pooling = 'avg',
 		classes=5,
-		classifier_activation="softmax"
 )
+
+irn.add(model)
+irn.add(Flatten())
+irn.add(Dense(1024,activation='relu'))
+irn.add(Dense(5,activation='softmax'))
 
 for layer in model.layers:
     layer.trainable = False
 
-rnn.add(model)
-rnn.add(Flatten())
-rnn.add(Dense(512,activation='relu'))
-rnn.add(Dense(5,activation='softmax'))
-rnn.compile(optimizer=Adam(learning_rate=.001),
+irn.compile(optimizer=Adam(learning_rate=.001),
 	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
-
-
-print("Resnet Model Created")
+print("Inception_ResnetV2 Model Created")
 
 #%%
 #Split Data & fit
 test_to_train = 0.2 
 x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=test_to_train, random_state=172, stratify=labels)
 
-history = rnn.fit(
+history = irn.fit(
 	x_train,
 	y_train,
 	epochs = 10,
@@ -96,7 +92,7 @@ history = rnn.fit(
 	#callbacks = [earlyStopping]
 )
 
-rnn.summary()
+irn.summary()
 # %%
 # plotting section
 acc = history.history['accuracy']
@@ -112,4 +108,46 @@ plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.title('Training and Validation Accuracy Over Epochs')
 plt.legend()
+plt.show()
+
+#%%
+val_loss, val_acc = irn.evaluate(x_test, y_test)
+
+print(f'Validation accuracy: {val_acc:.4f}')
+
+randomList = np.random.choice(len(x_test), 9, replace=False)
+
+plt.figure(figsize = (5, 5))
+
+for i, index in enumerate(randomList):
+	image = x_test[index]
+
+	yhat = irn.predict(np.asarray([image]))
+	prediction = np.argmax(yhat)
+	# recall: n rows, n cols, index of current subplot (matlab isn't zero indexed)
+	axes = plt.subplot(3, 3, i+1)
+	plt.imshow(image.squeeze(), cmap='gray')
+	plt.title(f'Guess: {prediction}')
+	plt.axis("off")
+
+plt.show()
+
+# %%
+# confusion matrix
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+
+# Step 2: Calculate predictions on the test set
+y_pred = irn.predict(x_test)
+y_pred_classes = np.argmax(y_pred, axis=1)
+
+# Step 3: Calculate the confusion matrix
+conf_matrix = confusion_matrix(y_test, y_pred_classes)
+
+# Step 4: Plot the confusion matrix
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, cmap='Reds', fmt='g')
+plt.xlabel('Predicted Class')
+plt.ylabel('True Class')
+plt.title('Confusion Matrix')
 plt.show()
