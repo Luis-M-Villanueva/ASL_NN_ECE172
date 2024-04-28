@@ -68,9 +68,6 @@ model = ResNet50(
 		#classifier_activation="softmax"
 )
 
-# new code, make or break - speed is life?
-# for layer in model.layers:
-#	layer.trainable=False
 
 for layer in model.layers:
     layer.trainable = False
@@ -79,7 +76,7 @@ rnn.add(model)
 rnn.add(Flatten())
 rnn.add(Dense(512,activation='relu'))
 rnn.add(Dense(5,activation='softmax'))
-rnn.compile(optimizer=Adam(learning_rate=.001),
+rnn.compile(optimizer=Adam(learning_rate=.01),
 	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
@@ -92,6 +89,10 @@ print("Resnet Model Created")
 test_to_train = 0.2 
 x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=test_to_train, random_state=172, stratify=labels)
 
+x_train = x_train.astype('float32')/255
+x_test = x_test.astype('float32')/255
+
+#%%
 history = rnn.fit(
 	x_train,
 	y_train,
@@ -115,7 +116,7 @@ plt.plot(history.history['accuracy'], label='Training Accuracy')
 plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
-plt.title('Training and Validation Accuracy Over Epochs')
+plt.title('Training and Validation Accuracy Over Epochs for ResNet50')
 plt.legend()
 plt.show()
 

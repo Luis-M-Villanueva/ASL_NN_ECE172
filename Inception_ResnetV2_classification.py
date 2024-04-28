@@ -72,7 +72,7 @@ irn.add(Dense(5,activation='softmax'))
 for layer in model.layers:
     layer.trainable = False
 
-irn.compile(optimizer=Adam(learning_rate=.001),
+irn.compile(optimizer=Adam(learning_rate=.01),
 	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
@@ -83,6 +83,10 @@ print("Inception_ResnetV2 Model Created")
 test_to_train = 0.2 
 x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=test_to_train, random_state=172, stratify=labels)
 
+x_train = x_train.astype('float32')/255
+x_test = x_test.astype('float32')/255
+
+#%%
 history = irn.fit(
 	x_train,
 	y_train,
@@ -106,17 +110,21 @@ plt.plot(history.history['accuracy'], label='Training Accuracy')
 plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
-plt.title('Training and Validation Accuracy Over Epochs')
+plt.title('Training and Validation Accuracy Over Epochs for Inception_ResNetV2')
 plt.legend()
 plt.show()
 
 #%%
+#evaluation
 val_loss, val_acc = irn.evaluate(x_test, y_test)
 
 print(f'Validation accuracy: {val_acc:.4f}')
 
 randomList = np.random.choice(len(x_test), 9, replace=False)
 
+
+#%% 
+#Generater Figures
 plt.figure(figsize = (5, 5))
 
 for i, index in enumerate(randomList):
@@ -124,13 +132,23 @@ for i, index in enumerate(randomList):
 
 	yhat = irn.predict(np.asarray([image]))
 	prediction = np.argmax(yhat)
+	actual = y_test[index]
 	# recall: n rows, n cols, index of current subplot (matlab isn't zero indexed)
 	axes = plt.subplot(3, 3, i+1)
 	plt.imshow(image.squeeze(), cmap='gray')
-	plt.title(f'Guess: {prediction}')
+	plt.title(f'Pred: {categories[prediction]}? ({categories[actual]})')
 	plt.axis("off")
-
 plt.show()
+
+# enumerate over categories and print each class name with its corresponding integer
+halfway = len(categories) // 2
+
+for i, class_name in enumerate(categories):
+    if i == halfway:
+        print()
+    # print the class name and corresponding integer
+    print(f'({i}: {class_name}),', end=' ')
+print()
 
 # %%
 # confusion matrix
