@@ -88,7 +88,7 @@ model.add(Dense(1000))
 model.add(Activation('relu'))
 model.add(Dropout(0.4))
 model.add(BatchNormalization())
-model.add(Dense(17))
+model.add(Dense(5))
 model.add(Activation('softmax'))
 
 model.summary()
