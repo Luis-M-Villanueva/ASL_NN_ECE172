@@ -56,7 +56,7 @@ print("Number of classes: ", n_classes)
 
 model = Sequential()
 
-model.add(Conv2D(filters=96, input_shape=(200,200,1), kernel_size=(11,11),\
+model.add(Conv2D(filters=96, input_shape=(200,200,1), kernel_size=(11,11),
  strides=(4,4), padding='valid'))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
