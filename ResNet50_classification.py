@@ -20,9 +20,9 @@ print("Libraries Loaded")
 print(f"CWD: ", os.getcwd())		# Amaan's
 									# C:\Users\amaan_r7vd8kf\AppData\Local\Programs\Microsoft VS Code
 
-dir_dataset = os.path.join(os.getcwd(), 'ASL_ECE172_Project', 'working_dataset')
-image_size = (200,200)
+dir_dataset = os.path.join(os.getcwd(), 'ASL_ECE172_Project', 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
 
+image_size = (200,200)
 
 categories = [folder for folder in os.listdir(dir_dataset) if os.path.join(dir_dataset, folder)]
 
@@ -63,20 +63,20 @@ model = ResNet50(
         weights= None,
 		input_tensor = None,
         input_shape = (200,200,1),
-		pooling = 'avg',
+		#pooling = 'avg',
 		classes=5,
 		#classifier_activation="softmax"
 )
 
-# new code, make or break - speed is life?
-# for layer in model.layers:
-#	layer.trainable=False
+
+#for layer in model.layers:
+#    layer.trainable = False
 
 rnn.add(model)
 rnn.add(Flatten())
 rnn.add(Dense(512,activation='relu'))
 rnn.add(Dense(5,activation='softmax'))
-rnn.compile(optimizer=Adam(learning_rate=.001),
+rnn.compile(optimizer=Adam(learning_rate=.01),
 	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
@@ -89,11 +89,15 @@ print("Resnet Model Created")
 test_to_train = 0.2 
 x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=test_to_train, random_state=172, stratify=labels)
 
+x_train = x_train.astype('float32')/255
+x_test = x_test.astype('float32')/255
+
+#%%
 history = rnn.fit(
 	x_train,
 	y_train,
 	epochs = 10,
-	batch_size = 32,
+    batch_size =16,
 	validation_data=(x_test, y_test),
 	#callbacks = [earlyStopping]
 )
@@ -112,7 +116,7 @@ plt.plot(history.history['accuracy'], label='Training Accuracy')
 plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
-plt.title('Training and Validation Accuracy Over Epochs')
+plt.title('Training and Validation Accuracy Over Epochs for ResNet50')
 plt.legend()
 plt.show()
 
@@ -122,10 +126,12 @@ val_loss, val_acc = rnn.evaluate(x_test, y_test)
 
 print(f'Validation accuracy: {val_acc:.4f}')
 
-randomList = np.random.choice(len(x_test), 9, replace=False)
+
 
 #%%
 # generate figures
+randomList = np.random.choice(len(x_test), 9, replace=False)
+
 plt.figure(figsize = (5, 5))
 
 for i, index in enumerate(randomList):
