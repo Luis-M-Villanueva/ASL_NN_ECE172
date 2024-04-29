@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 print(f"CWD: ", os.getcwd())		# Amaan's
 									# C:\Users\amaan_r7vd8kf\AppData\Local\Programs\Microsoft VS Code
 
-dir_dataset = os.path.join(os.getcwd(), 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
+dir_dataset = os.path.join(os.getcwd(), 'ASL_ECE172_Project', 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
 image_size = (200,200)
 
 
@@ -73,7 +73,7 @@ model.add(Activation('relu'))
 model.add(BatchNormalization())
 model.add(Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding='valid'))
 model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
+model.add(MaxPooling2D(pool_size=(1,1), strides=(1,1), padding='valid')) # modified
 model.add(BatchNormalization())
 model.add(Flatten())
 model.add(Dense(4096, input_shape=(200*200*1,)))
@@ -100,6 +100,12 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
 test_to_train = 0.2 
 x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=test_to_train, random_state=172, stratify=labels)
 
+# new
+from tensorflow.keras.utils import to_categorical
+
+# Convert labels to one-hot encoded arrays
+y_train = to_categorical(y_train, num_classes=5)
+y_test = to_categorical(y_test, num_classes=5)
 
 history = model.fit(
 	x_train,
