@@ -1,25 +1,26 @@
-#%%
-#Load Packages
+#%% 
+#Load Libraries
 import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image as img
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Rescaling, Conv2D, MaxPooling2D, Flatten, Dropout,BatchNormalization, Dense, Activation
+from tensorflow.keras.layers import Rescaling, Conv2D, MaxPool2D, Flatten, Dropout, Dense, Activation
 # dense = fully connected layers
 from tensorflow.keras.utils import load_img,img_to_array
 from tensorflow.keras.optimizers import Adam, SGD
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.applications import InceptionResNetV2
+from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
+from tensorflow.keras_cv.models import YOLOv8Detector, YOLOV8Backbone
 
-
-
-#%%
-#Running initial setup... setting up dataset...
+print("Libraries Loaded")
+#%%Running initial setup... setting up dataset...
 print(f"CWD: ", os.getcwd())		# Amaan's
 									# C:\Users\amaan_r7vd8kf\AppData\Local\Programs\Microsoft VS Code
 
-dir_dataset = os.path.join(os.getcwd(), 'ASL_ECE172_Project', 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
+dir_dataset = os.path.join(os.getcwd(), 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
 image_size = (200,200)
 
 
@@ -52,62 +53,29 @@ n_classes = len(np.unique(labels))		# labels contains each label for each catego
 print("Number of classes: ", n_classes)
 
 #%%
-#AlexNet NN
+#Yolov8 
+model = YOLOv8Detector(num_class=5,backbone=YOLOV8Backbone.from_preset('yolo_v8_m_backbone_coco'))
+ynn = Sequential()
 
-model = Sequential()
+ynn.add(model)
+ynn.add(Flatten())
+ynn.add(Dense(512,activation='relu'))
+ynn.add(Dense(5,activation='softmax'))
+ynn.compile(optimizer=Adam(learning_rate=.0001),
+	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+	metrics=['accuracy'])
 
-model.add(Conv2D(filters=96, input_shape=(200,200,1), kernel_size=(11,11),
- strides=(4,4), padding='valid'))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
-model.add(BatchNormalization())
-model.add(Conv2D(filters=256, kernel_size=(11,11), strides=(1,1), padding='valid'))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
-model.add(BatchNormalization())
-model.add(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), padding='valid'))
-model.add(Activation('relu'))
-model.add(BatchNormalization())
-model.add(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), padding='valid'))
-model.add(Activation('relu'))
-model.add(BatchNormalization())
-model.add(Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding='valid'))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(1,1), strides=(1,1), padding='valid')) # modified
-model.add(BatchNormalization())
-model.add(Flatten())
-model.add(Dense(4096, input_shape=(200*200*1,)))
-model.add(Activation('relu'))
-model.add(Dropout(0.4))
-model.add(BatchNormalization())
-model.add(Dense(4096))
-model.add(Activation('relu'))
-model.add(Dropout(0.4))
-model.add(BatchNormalization())
-model.add(Dense(1000))
-model.add(Activation('relu'))
-model.add(Dropout(0.4))
-model.add(BatchNormalization())
-model.add(Dense(5))
-model.add(Activation('softmax'))
+ynn.summary()
 
-model.summary()
-
-# (4) Compile 
-model.compile(loss='categorical_crossentropy', optimizer='adam',
- metrics=['accuracy'])
-
+#%%
+#Split Data & fit
 test_to_train = 0.2 
 x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=test_to_train, random_state=172, stratify=labels)
 
-# new
-from tensorflow.keras.utils import to_categorical
+x_train = x_train.astype('float32')/255
+x_test = x_test.astype('float32')/255
 
-# Convert labels to one-hot encoded arrays
-y_train = to_categorical(y_train, num_classes=5)
-y_test = to_categorical(y_test, num_classes=5)
-
-history = model.fit(
+history = ynn.fit(
 	x_train,
 	y_train,
 	epochs = 10,
@@ -116,8 +84,8 @@ history = model.fit(
 	#callbacks = [earlyStopping]
 )
 
-# %%
-# plotting section
+#%%
+#Rest of Code
 acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 
@@ -129,32 +97,54 @@ plt.plot(history.history['accuracy'], label='Training Accuracy')
 plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
-plt.title('Training and Validation Accuracy Over Epochs')
+plt.title('Training and Validation Accuracy Over Epochs for Inception_ResNetV2')
+plt.legend()
+plt.show()
+
+plt.figure(figsize=(5, 5))
+plt.plot(history.history['loss'], label='Training Accuracy')
+plt.plot(history.history['val_loss'], label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('loss')
+plt.title('Training and Validation Loss Over Epochs for Inception_ResNetV2')
 plt.legend()
 plt.show()
 
 #%%
-# evaluation
-val_loss, val_acc = model.evaluate(x_test, y_test)
+#evaluation
+val_loss, val_acc = ynn.evaluate(x_test, y_test)
 
 print(f'Validation accuracy: {val_acc:.4f}')
 
 randomList = np.random.choice(len(x_test), 9, replace=False)
 
+
+#%% 
+#Generater Figures
 plt.figure(figsize = (5, 5))
 
 for i, index in enumerate(randomList):
 	image = x_test[index]
 
-	yhat = model.predict(np.asarray([image]))
+	yhat = ynn.predict(np.asarray([image]))
 	prediction = np.argmax(yhat)
+	actual = y_test[index]
 	# recall: n rows, n cols, index of current subplot (matlab isn't zero indexed)
 	axes = plt.subplot(3, 3, i+1)
 	plt.imshow(image.squeeze(), cmap='gray')
-	plt.title(f'Guess: {prediction}')
+	plt.title(f'Pred: {categories[prediction]}? ({categories[actual]})')
 	plt.axis("off")
-
 plt.show()
+
+# enumerate over categories and print each class name with its corresponding integer
+halfway = len(categories) // 2
+
+for i, class_name in enumerate(categories):
+    if i == halfway:
+        print()
+    # print the class name and corresponding integer
+    print(f'({i}: {class_name}),', end=' ')
+print()
 
 # %%
 # confusion matrix
@@ -162,7 +152,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
 # Step 2: Calculate predictions on the test set
-y_pred = model.predict(x_test)
+y_pred = ynn.predict(x_test)
 y_pred_classes = np.argmax(y_pred, axis=1)
 
 # Step 3: Calculate the confusion matrix
@@ -175,5 +165,3 @@ plt.xlabel('Predicted Class')
 plt.ylabel('True Class')
 plt.title('Confusion Matrix')
 plt.show()
-
-#%%
