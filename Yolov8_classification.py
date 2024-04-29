@@ -1,167 +1,46 @@
 #%% 
 #Load Libraries
-import os
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.preprocessing import image as img
-from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Rescaling, Conv2D, MaxPool2D, Flatten, Dropout, Dense, Activation
-# dense = fully connected layers
-from tensorflow.keras.utils import load_img,img_to_array
-from tensorflow.keras.optimizers import Adam, SGD
+from ultralytics import YOLO
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.applications import InceptionResNetV2
-from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
-from tensorflow.keras_cv.models import YOLOv8Detector, YOLOV8Backbone
+import os
+import pandas as pd
 
 print("Libraries Loaded")
-#%%Running initial setup... setting up dataset...
-print(f"CWD: ", os.getcwd())		# Amaan's
-									# C:\Users\amaan_r7vd8kf\AppData\Local\Programs\Microsoft VS Code
-
-dir_dataset = os.path.join(os.getcwd(), 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
-image_size = (200,200)
-
-
-categories = [folder for folder in os.listdir(dir_dataset) if os.path.join(dir_dataset, folder)]
-
-images = []
-labels = []
-
-for index, category in enumerate(categories):
-	cat_path = os.path.join(dir_dataset, category)		# full path
-	image_files = [file for file in os.listdir(cat_path) if file.endswith(('.jpg', '.png', '.jpeg'))]
-
-	for image in image_files:
-		img_path = os.path.join(cat_path, image)
-		img_data = img.load_img(img_path, target_size=image_size, color_mode='grayscale')	# add color_mode = grayscale if needed
-		img_array = img.img_to_array(img_data)				
-		
-		images.append(img_array)							
-		labels.append(index)								
-															
-	
-# convert to np arrays
-images = np.array(images)
-labels = np.array(labels)
-
-print('Size of images array:', images.shape)
-print('Size of labels array:', labels.shape)
-
-n_classes = len(np.unique(labels))		# labels contains each label for each category too
-print("Number of classes: ", n_classes)
-
 #%%
-#Yolov8 
-model = YOLOv8Detector(num_class=5,backbone=YOLOV8Backbone.from_preset('yolo_v8_m_backbone_coco'))
-ynn = Sequential()
+#YoloV8 
 
-ynn.add(model)
-ynn.add(Flatten())
-ynn.add(Dense(512,activation='relu'))
-ynn.add(Dense(5,activation='softmax'))
-ynn.compile(optimizer=Adam(learning_rate=.0001),
-	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-	metrics=['accuracy'])
+model = YOLO('yolov8n-cls.pt')
 
-ynn.summary()
+results = model.train(data=os.path.join(os.getcwd(),'asl_dataset'),epochs=10,batch=50,imgsz=200)
+print("Training Complete")
 
+metrics = model.val(data=os.path.join(os.getcwd(),'asl_dataset'),epochs=10,batch=50,imgsz=200)
+print("Validation Complete")
 #%%
-#Split Data & fit
-test_to_train = 0.2 
-x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=test_to_train, random_state=172, stratify=labels)
+#Plot
 
-x_train = x_train.astype('float32')/255
-x_test = x_test.astype('float32')/255
+results_path= os.path.join(os.getcwd(),'runs','classify','train3','results.csv')
 
-history = ynn.fit(
-	x_train,
-	y_train,
-	epochs = 10,
-	batch_size = 100,
-	validation_data=(x_test, y_test),
-	#callbacks = [earlyStopping]
-)
+results = pd.read_csv(results_path)
 
-#%%
-#Rest of Code
-acc = history.history['accuracy']
-val_acc = history.history['val_accuracy']
-
-loss = history.history['loss']
-val_loss = history.history['val_loss']
-
-plt.figure(figsize=(5, 5))
-plt.plot(history.history['accuracy'], label='Training Accuracy')
-plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.title('Training and Validation Accuracy Over Epochs for Inception_ResNetV2')
-plt.legend()
-plt.show()
-
-plt.figure(figsize=(5, 5))
-plt.plot(history.history['loss'], label='Training Accuracy')
-plt.plot(history.history['val_loss'], label='Validation Accuracy')
-plt.xlabel('Epoch')
+plt.figure()
+plt.plot(results['                  epoch'], results['             train/loss'], label='train loss')
+plt.plot(results['                  epoch'], results['               val/loss'], label='val loss', c='red')
+plt.grid()
+plt.title('Loss vs epochs for YoLoV8')
 plt.ylabel('loss')
-plt.title('Training and Validation Loss Over Epochs for Inception_ResNetV2')
+plt.xlabel('epochs')
 plt.legend()
+
+
+plt.figure()
+plt.plot(results['                  epoch'], results['  metrics/accuracy_top1'] * 100)
+plt.grid()
+plt.title('Validation accuracy vs epochs for YoLoV8')
+plt.ylabel('accuracy (%)')
+plt.xlabel('epochs')
+
 plt.show()
 
-#%%
-#evaluation
-val_loss, val_acc = ynn.evaluate(x_test, y_test)
-
-print(f'Validation accuracy: {val_acc:.4f}')
-
-randomList = np.random.choice(len(x_test), 9, replace=False)
-
-
-#%% 
-#Generater Figures
-plt.figure(figsize = (5, 5))
-
-for i, index in enumerate(randomList):
-	image = x_test[index]
-
-	yhat = ynn.predict(np.asarray([image]))
-	prediction = np.argmax(yhat)
-	actual = y_test[index]
-	# recall: n rows, n cols, index of current subplot (matlab isn't zero indexed)
-	axes = plt.subplot(3, 3, i+1)
-	plt.imshow(image.squeeze(), cmap='gray')
-	plt.title(f'Pred: {categories[prediction]}? ({categories[actual]})')
-	plt.axis("off")
-plt.show()
-
-# enumerate over categories and print each class name with its corresponding integer
-halfway = len(categories) // 2
-
-for i, class_name in enumerate(categories):
-    if i == halfway:
-        print()
-    # print the class name and corresponding integer
-    print(f'({i}: {class_name}),', end=' ')
-print()
 
 # %%
-# confusion matrix
-from sklearn.metrics import confusion_matrix
-import seaborn as sns
-
-# Step 2: Calculate predictions on the test set
-y_pred = ynn.predict(x_test)
-y_pred_classes = np.argmax(y_pred, axis=1)
-
-# Step 3: Calculate the confusion matrix
-conf_matrix = confusion_matrix(y_test, y_pred_classes)
-
-# Step 4: Plot the confusion matrix
-plt.figure(figsize=(8, 6))
-sns.heatmap(conf_matrix, annot=True, cmap='Reds', fmt='g')
-plt.xlabel('Predicted Class')
-plt.ylabel('True Class')
-plt.title('Confusion Matrix')
-plt.show()
