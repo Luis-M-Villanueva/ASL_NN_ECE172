@@ -1,2 +1,3 @@
 jupyter exports/* linguist-vendored
 compiled models/* linguist-vendored
+*.html linguist-vendored
