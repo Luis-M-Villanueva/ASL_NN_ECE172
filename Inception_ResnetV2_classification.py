@@ -19,7 +19,7 @@ print("Libraries Loaded")
 print(f"CWD: ", os.getcwd())		# Amaan's
 									# C:\Users\amaan_r7vd8kf\AppData\Local\Programs\Microsoft VS Code
 
-dir_dataset = os.path.join(os.getcwd(), 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
+dir_dataset = os.path.join(os.getcwd(), 'ASL_ECE172_Project', 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
 image_size = (200,200)
 
 
@@ -69,10 +69,10 @@ irn.add(Flatten())
 irn.add(Dense(1024,activation='relu'))
 irn.add(Dense(5,activation='softmax'))
 
-for layer in model.layers:
-    layer.trainable = False
+#for layer in model.layers:
+#    layer.trainable = False
 
-irn.compile(optimizer=Adam(learning_rate=.01),
+irn.compile(optimizer=Adam(learning_rate=.001),
 	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
@@ -91,7 +91,7 @@ history = irn.fit(
 	x_train,
 	y_train,
 	epochs = 10,
-	batch_size = 100,
+	batch_size = 20,
 	validation_data=(x_test, y_test),
 	#callbacks = [earlyStopping]
 )
@@ -120,11 +120,13 @@ val_loss, val_acc = irn.evaluate(x_test, y_test)
 
 print(f'Validation accuracy: {val_acc:.4f}')
 
-randomList = np.random.choice(len(x_test), 9, replace=False)
+
 
 
 #%% 
 #Generater Figures
+randomList = np.random.choice(len(x_test), 9, replace=False)
+
 plt.figure(figsize = (5, 5))
 
 for i, index in enumerate(randomList):

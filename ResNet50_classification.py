@@ -20,9 +20,9 @@ print("Libraries Loaded")
 print(f"CWD: ", os.getcwd())		# Amaan's
 									# C:\Users\amaan_r7vd8kf\AppData\Local\Programs\Microsoft VS Code
 
-dir_dataset = os.path.join(os.getcwd(), 'working_dataset')
-image_size = (200,200)
+dir_dataset = os.path.join(os.getcwd(), 'ASL_ECE172_Project', 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
 
+image_size = (200,200)
 
 categories = [folder for folder in os.listdir(dir_dataset) if os.path.join(dir_dataset, folder)]
 
@@ -63,14 +63,14 @@ model = ResNet50(
         weights= None,
 		input_tensor = None,
         input_shape = (200,200,1),
-		pooling = 'avg',
+		#pooling = 'avg',
 		classes=5,
 		#classifier_activation="softmax"
 )
 
 
-for layer in model.layers:
-    layer.trainable = False
+#for layer in model.layers:
+#    layer.trainable = False
 
 rnn.add(model)
 rnn.add(Flatten())
@@ -97,7 +97,7 @@ history = rnn.fit(
 	x_train,
 	y_train,
 	epochs = 10,
-    batch_size =100,
+    batch_size =16,
 	validation_data=(x_test, y_test),
 	#callbacks = [earlyStopping]
 )
@@ -126,10 +126,12 @@ val_loss, val_acc = rnn.evaluate(x_test, y_test)
 
 print(f'Validation accuracy: {val_acc:.4f}')
 
-randomList = np.random.choice(len(x_test), 9, replace=False)
+
 
 #%%
 # generate figures
+randomList = np.random.choice(len(x_test), 9, replace=False)
+
 plt.figure(figsize = (5, 5))
 
 for i, index in enumerate(randomList):
