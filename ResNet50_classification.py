@@ -63,7 +63,6 @@ model = ResNet50(
         weights= None,
 		input_tensor = None,
         input_shape = (200,200,1),
-		pooling = 'avg',
 		classes=5,
 		#classifier_activation="softmax"
 )
@@ -76,11 +75,11 @@ rnn.add(model)
 rnn.add(Flatten())
 rnn.add(Dense(512,activation='relu'))
 rnn.add(Dense(5,activation='softmax'))
-rnn.compile(optimizer=Adam(learning_rate=.01),
+rnn.compile(optimizer=Adam(learning_rate=.001),
 	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
-
+rnn.summary()
 
 print("Resnet Model Created")
 
@@ -97,12 +96,12 @@ history = rnn.fit(
 	x_train,
 	y_train,
 	epochs = 10,
-    batch_size =100,
+    batch_size =50,
 	validation_data=(x_test, y_test),
 	#callbacks = [earlyStopping]
 )
 
-rnn.summary()
+
 # %%
 # plotting section
 acc = history.history['accuracy']
@@ -117,6 +116,15 @@ plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.title('Training and Validation Accuracy Over Epochs for ResNet50')
+plt.legend()
+plt.show()
+
+plt.figure(figsize=(5, 5))
+plt.plot(history.history['loss'], label='Training Accuracy')
+plt.plot(history.history['val_loss'], label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('loss')
+plt.title('Training and Validation Loss Over Epochs for ResNet50')
 plt.legend()
 plt.show()
 

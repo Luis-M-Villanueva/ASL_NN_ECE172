@@ -72,7 +72,7 @@ irn.add(Dense(5,activation='softmax'))
 for layer in model.layers:
     layer.trainable = False
 
-irn.compile(optimizer=Adam(learning_rate=.01),
+irn.compile(optimizer=Adam(learning_rate=.001),
 	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
@@ -91,7 +91,7 @@ history = irn.fit(
 	x_train,
 	y_train,
 	epochs = 10,
-	batch_size = 100,
+	batch_size = 50,
 	validation_data=(x_test, y_test),
 	#callbacks = [earlyStopping]
 )
@@ -111,6 +111,15 @@ plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.title('Training and Validation Accuracy Over Epochs for Inception_ResNetV2')
+plt.legend()
+plt.show()
+
+plt.figure(figsize=(5, 5))
+plt.plot(history.history['loss'], label='Training Accuracy')
+plt.plot(history.history['val_loss'], label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('loss')
+plt.title('Training and Validation Loss Over Epochs for Inception_ResNetV2')
 plt.legend()
 plt.show()
 

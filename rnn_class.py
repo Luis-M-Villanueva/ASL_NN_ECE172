@@ -11,16 +11,16 @@ from tensorflow.keras.utils import load_img,img_to_array
 from tensorflow.keras.optimizers import Adam, SGD
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.applications import InceptionResNetV2
+from tensorflow.keras.applications import ResNet50 
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
-from keras_cv.models import YOLOV8Detector, YOLOV8Backbone
 
+tf.config.list_physical_devices("GPU")
 print("Libraries Loaded")
 #%%Running initial setup... setting up dataset...
 print(f"CWD: ", os.getcwd())		# Amaan's
 									# C:\Users\amaan_r7vd8kf\AppData\Local\Programs\Microsoft VS Code
 
-dir_dataset = os.path.join(os.getcwd(), 'working_dataset') # DIRECTOY IS SUBJECT TO CHANGE FOR DIFFERENT USERS
+dir_dataset = os.path.join(os.getcwd(), 'working_dataset')
 image_size = (200,200)
 
 
@@ -52,40 +52,53 @@ print('Size of labels array:', labels.shape)
 n_classes = len(np.unique(labels))		# labels contains each label for each category too
 print("Number of classes: ", n_classes)
 
-#%%
-#Yolov8 
-model = YOLOV8Detector(num_classes=5,bounding_box_format='xywh', backbone=YOLOV8Backbone.from_preset('yolo_v8_m_backbone_coco'))
-ynn = Sequential()
 
-ynn.add(model)
-ynn.add(Flatten())
-ynn.add(Dense(512,activation='relu'))
-ynn.add(Dense(5,activation='softmax'))
-ynn.compile(optimizer=Adam(learning_rate=.001),
+#%%
+#ResNet50
+
+base_model = ResNet50(
+        include_top = False,
+        weights= None,
+        input_shape = (200,200,1),
+)
+
+base_model.trainable = False
+
+inputs = tf.keras.Input(shape=(200,200,1))
+
+scale_layer = tf.keras.layers.Rescaling(scale = 1./255)
+x = scale_layer(inputs)
+
+x = base_model(x, training=False)
+x = tf.keras.layers.GlobalAveragePooling2D()(x)
+x = tf.keras.layers.Dropout(.2)(x)
+outputs = Dense(5,activation = "softmax")(x)
+rnn = tf.keras.Model(inputs,outputs)
+
+rnn.summary(show_trainable=True)
+
+rnn.compile(optimizer=Adam(learning_rate=.0001),
 	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
-ynn.summary()
+
+
+print("Resnet Model Created")
 
 #%%
 #Split Data & fit
 test_to_train = 0.2 
 x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=test_to_train, random_state=172, stratify=labels)
 
-x_train = x_train.astype('float32')/255
-x_test = x_test.astype('float32')/255
-
-history = ynn.fit(
+#%%
+history = rnn.fit(
 	x_train,
 	y_train,
 	epochs = 10,
-	batch_size = 100,
+    batch_size =100,
 	validation_data=(x_test, y_test),
 	#callbacks = [earlyStopping]
 )
-
-#%%
-#Rest of Code
 acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 
@@ -97,36 +110,26 @@ plt.plot(history.history['accuracy'], label='Training Accuracy')
 plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
-plt.title('Training and Validation Accuracy Over Epochs for Inception_ResNetV2')
-plt.legend()
-plt.show()
-
-plt.figure(figsize=(5, 5))
-plt.plot(history.history['loss'], label='Training Accuracy')
-plt.plot(history.history['val_loss'], label='Validation Accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('loss')
-plt.title('Training and Validation Loss Over Epochs for Inception_ResNetV2')
+plt.title('Training and Validation Accuracy Over Epochs for ResNet50')
 plt.legend()
 plt.show()
 
 #%%
-#evaluation
-val_loss, val_acc = ynn.evaluate(x_test, y_test)
+# evaluation
+val_loss, val_acc = rnn.evaluate(x_test, y_test)
 
 print(f'Validation accuracy: {val_acc:.4f}')
 
 randomList = np.random.choice(len(x_test), 9, replace=False)
 
-
-#%% 
-#Generater Figures
+#%%
+# generate figures
 plt.figure(figsize = (5, 5))
 
 for i, index in enumerate(randomList):
 	image = x_test[index]
 
-	yhat = ynn.predict(np.asarray([image]))
+	yhat = rnn.predict(np.asarray([image]))
 	prediction = np.argmax(yhat)
 	actual = y_test[index]
 	# recall: n rows, n cols, index of current subplot (matlab isn't zero indexed)
@@ -152,7 +155,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
 # Step 2: Calculate predictions on the test set
-y_pred = ynn.predict(x_test)
+y_pred = rnn.predict(x_test)
 y_pred_classes = np.argmax(y_pred, axis=1)
 
 # Step 3: Calculate the confusion matrix
@@ -165,3 +168,8 @@ plt.xlabel('Predicted Class')
 plt.ylabel('True Class')
 plt.title('Confusion Matrix')
 plt.show()
+
+
+
+
+

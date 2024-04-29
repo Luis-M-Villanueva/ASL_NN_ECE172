@@ -10,10 +10,11 @@ from tensorflow.keras.layers import Rescaling, Conv2D, MaxPool2D, Flatten, Dropo
 from tensorflow.keras.utils import load_img,img_to_array
 from tensorflow.keras.optimizers import Adam, SGD
 import matplotlib.pyplot as plt
+from tensorflow.keras.models import Model
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.applications import InceptionResNetV2
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
-from keras_cv.models import YOLOV8Detector, YOLOV8Backbone
+from keras_cv.models import ResNet18Backbone
 
 print("Libraries Loaded")
 #%%Running initial setup... setting up dataset...
@@ -54,18 +55,19 @@ print("Number of classes: ", n_classes)
 
 #%%
 #Yolov8 
-model = YOLOV8Detector(num_classes=5,bounding_box_format='xywh', backbone=YOLOV8Backbone.from_preset('yolo_v8_m_backbone_coco'))
-ynn = Sequential()
+model = ResNet18Backbone(input_shape=(200,200,1))
 
-ynn.add(model)
-ynn.add(Flatten())
-ynn.add(Dense(512,activation='relu'))
-ynn.add(Dense(5,activation='softmax'))
-ynn.compile(optimizer=Adam(learning_rate=.001),
+x = Flatten()(model.output)
+x = Dense(256,activation='relu')(x)
+output=Dense(5,activation='softmax')(x)
+
+rnne = Model(inputs=model.input,outputs=output)
+
+rnne.compile(optimizer=Adam(learning_rate=1e-5),
 	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
-ynn.summary()
+rnne.summary()
 
 #%%
 #Split Data & fit
@@ -75,7 +77,7 @@ x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=te
 x_train = x_train.astype('float32')/255
 x_test = x_test.astype('float32')/255
 
-history = ynn.fit(
+history = rnne.fit(
 	x_train,
 	y_train,
 	epochs = 10,
@@ -112,7 +114,7 @@ plt.show()
 
 #%%
 #evaluation
-val_loss, val_acc = ynn.evaluate(x_test, y_test)
+val_loss, val_acc = rnne.evaluate(x_test, y_test)
 
 print(f'Validation accuracy: {val_acc:.4f}')
 
@@ -126,7 +128,7 @@ plt.figure(figsize = (5, 5))
 for i, index in enumerate(randomList):
 	image = x_test[index]
 
-	yhat = ynn.predict(np.asarray([image]))
+	yhat = rnne.predict(np.asarray([image]))
 	prediction = np.argmax(yhat)
 	actual = y_test[index]
 	# recall: n rows, n cols, index of current subplot (matlab isn't zero indexed)
@@ -152,7 +154,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
 # Step 2: Calculate predictions on the test set
-y_pred = ynn.predict(x_test)
+y_pred = rnne.predict(x_test)
 y_pred_classes = np.argmax(y_pred, axis=1)
 
 # Step 3: Calculate the confusion matrix
