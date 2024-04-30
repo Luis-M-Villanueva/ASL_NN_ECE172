@@ -16,7 +16,7 @@ from tensorflow.keras.applications import InceptionResNetV2
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
 from keras_cv.models import ResNet18Backbone
 
-print("Libraries Loaded")
+print("RESNET 18 IS NOT WORKING. STOP SOTP stop")
 #%%Running initial setup... setting up dataset...
 print(f"CWD: ", os.getcwd())		# Amaan's
 									# C:\Users\amaan_r7vd8kf\AppData\Local\Programs\Microsoft VS Code
