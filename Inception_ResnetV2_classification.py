@@ -7,7 +7,7 @@ from tensorflow.keras.preprocessing import image as img
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Rescaling, Conv2D, MaxPool2D, Flatten, Dropout, Dense, Activation
 # dense = fully connected layers
-from tensorflow.keras.utils import load_img,img_to_array
+from tensorflow.keras.utils import load_img,img_to_array, to_categorical
 from tensorflow.keras.optimizers import Adam, SGD
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
@@ -34,7 +34,7 @@ for index, category in enumerate(categories):
 
 	for image in image_files:
 		img_path = os.path.join(cat_path, image)
-		img_data = img.load_img(img_path, target_size=image_size, color_mode='grayscale')	# add color_mode = grayscale if needed
+		img_data = img.load_img(img_path, target_size=image_size, color_mode='rgb')	# add color_mode = grayscale if needed
 		img_array = img.img_to_array(img_data)				
 		
 		images.append(img_array)							
@@ -58,9 +58,10 @@ irn = Sequential()
 
 model = InceptionResNetV2(
         include_top = False,
-        weights= None,
+        weights= 'imagenet',
 		input_tensor= None,
-        input_shape = (200,200,1),
+        pooling = 'avg',
+        input_shape = (200,200,3),
 		classes=5,
 )
 
@@ -72,8 +73,8 @@ irn.add(Dense(5,activation='softmax'))
 for layer in model.layers:
     layer.trainable = False
 
-irn.compile(optimizer=Adam(learning_rate=.001),
-	loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+irn.compile(optimizer=Adam(learning_rate=.0001),
+	loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False),
 	metrics=['accuracy'])
 
 print("Inception_ResnetV2 Model Created")
@@ -86,12 +87,15 @@ x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=te
 x_train = x_train.astype('float32')/255
 x_test = x_test.astype('float32')/255
 
+y_train = to_categorical(y_train, num_classes=n_classes)
+y_test = to_categorical(y_test, num_classes=n_classes)
+
 #%%
 history = irn.fit(
 	x_train,
 	y_train,
 	epochs = 10,
-	batch_size = 50,
+	batch_size = 32,
 	validation_data=(x_test, y_test),
 	#callbacks = [earlyStopping]
 )
@@ -115,8 +119,8 @@ plt.legend()
 plt.show()
 
 plt.figure(figsize=(5, 5))
-plt.plot(history.history['loss'], label='Training Accuracy')
-plt.plot(history.history['val_loss'], label='Validation Accuracy')
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('loss')
 plt.title('Training and Validation Loss Over Epochs for Inception_ResNetV2')
@@ -143,6 +147,7 @@ for i, index in enumerate(randomList):
 	prediction = np.argmax(yhat)
 	actual = y_test[index]
 	# recall: n rows, n cols, index of current subplot (matlab isn't zero indexed)
+	actual = np.argmax(actual)
 	axes = plt.subplot(3, 3, i+1)
 	plt.imshow(image.squeeze(), cmap='gray')
 	plt.title(f'Pred: {categories[prediction]}? ({categories[actual]})')
@@ -167,9 +172,9 @@ import seaborn as sns
 # Step 2: Calculate predictions on the test set
 y_pred = irn.predict(x_test)
 y_pred_classes = np.argmax(y_pred, axis=1)
-
+y_test_classes = np.argmax(y_test, axis=1)
 # Step 3: Calculate the confusion matrix
-conf_matrix = confusion_matrix(y_test, y_pred_classes)
+conf_matrix = confusion_matrix(y_test_classes, y_pred_classes)
 
 # Step 4: Plot the confusion matrix
 plt.figure(figsize=(8, 6))
@@ -178,3 +183,4 @@ plt.xlabel('Predicted Class')
 plt.ylabel('True Class')
 plt.title('Confusion Matrix')
 plt.show()
+# %%
