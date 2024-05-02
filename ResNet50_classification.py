@@ -73,7 +73,7 @@ model = ResNet50(
 
 rnn.add(model)
 rnn.add(Flatten())
-rnn.add(Dense(1024,activation='relu'))
+rnn.add(Dense(2048,activation='relu'))
 rnn.add(Dense(5,activation='softmax'))
 
 for layer in model.layers:
@@ -102,11 +102,12 @@ y_test = to_categorical(y_test, num_classes=n_classes)
 history = rnn.fit(
 	x_train,
 	y_train,
-	epochs = 10,
+	epochs = 20, #Changed to 20 Epochs
     batch_size =32,
 	validation_data=(x_test, y_test),
 	#callbacks = [earlyStopping]
 )
+model.summary()
 rnn.summary()
 
 # %%
