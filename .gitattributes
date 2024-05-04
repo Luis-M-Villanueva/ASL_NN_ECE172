@@ -1,0 +1,4 @@
+jupyter_exports/** linguist-vendored
+compiled_models/** linguist-vendored
+*.html linguist-vendored
+*.joblib linguist-vendored
