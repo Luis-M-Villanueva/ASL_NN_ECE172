@@ -183,4 +183,3 @@ plt.xlabel('Predicted Class')
 plt.ylabel('True Class')
 plt.title('Confusion Matrix')
 plt.show()
-# %%
