@@ -100,7 +100,6 @@ history = irn.fit(
 	#callbacks = [earlyStopping]
 )
 
-model.summary()
 irn.summary()
 # %%
 # plotting section
